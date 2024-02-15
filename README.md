@@ -1,1 +1,1 @@
-just making a youtube extension
+YouTube extension summarisig videos with gemini pro 
