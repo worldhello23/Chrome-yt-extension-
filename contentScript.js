@@ -1,12 +1,13 @@
 function doit () {
     const textareaElement = document.createElement("textarea");
+   
 
     // listen for youtube page and if its updated
     chrome.runtime.onMessage.addListener((obj,sender,response) => {
         
         const { videoId } = obj;          
         currentVideo = videoId;
-        
+
         newVideoLoaded();
             
     });
@@ -16,9 +17,9 @@ function doit () {
 const newVideoLoaded =  () => {
     textareaElement.textContent = '';
     const searchBtnExists = document.getElementsByClassName("search-btn")[0];
-    const divElementExists = document.getElementsByClassName("div-element")[0];
-    
-    if (!searchBtnExists) {
+
+     if (!searchBtnExists) {
+         //search btn
         const searchBtn = document.createElement("img");
         searchBtn.src = chrome.runtime.getURL("images/search.png");
         searchBtn.className = "search-btn";
@@ -26,8 +27,9 @@ const newVideoLoaded =  () => {
         searchBtn.style.width = "auto";
         searchBtn.style.height = "auto";
     
-        youtubebar = document.evaluate("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[2]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-        childd = document.getElementById("secondary-inner");
+        
+        childd = document.querySelector("#secondary-inner");
+        youtubebar = childd.parentNode;
         youtubebar.insertBefore(searchBtn, childd);
 
         //newBTN
@@ -36,10 +38,12 @@ const newVideoLoaded =  () => {
         newBtn.className = "new-btn";
         newBtn.style.marginLeft = "5px"; 
         
-        youtubebar.insertBefore(newBtn, searchBtn.nextSibling);
+        // youtubebar.appendChild(newBtn);
+        youtubebar.insertBefore(newBtn, childd);//searchBtn.nextSibling);
         console.log("we are making a button");
         console.log(newBtn);
         console.log('this is new btn');
+        // open chatgpt on click newbtn
         newBtn.addEventListener("click", function() {
             // Send a message to the background script to open a new tab
             chrome.runtime.sendMessage({ openNewTab: "https://chat.openai.com" });
@@ -47,36 +51,62 @@ const newVideoLoaded =  () => {
         // summarize 
         const summ = document.createElement("button");
         summ.textContent = "summarize";
-        summ.className = "new-btn";
+        summ.className = "summ";
         summ.style.marginLeft = "5px"; 
-        youtubebar.insertBefore(summ, newBtn.nextSibling);
+        youtubebar.insertBefore(summ, childd);
         summ.addEventListener("click", function() {
             // Send a message to the background script to open a new tab
-            sendRequestToCloudFunction(textareaElement.textContent); 
+            prompt_text  = "Summarize the following transcript as if to a final user of a summary service. Be cohesive but also direct. Here it is :" + text_cleaned;
+            
+            sendRequestToCloudFunction(prompt_text)
+    .then(data => {
+        // Set the response from the Cloud Function as the content of the textarea
+        textareaElement.textContent = data;
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error.message);
+        // Optionally, display an error message to the user
+        textareaElement.textContent = 'An error occurred while fetching data from the server.';
+    });
+
         });
-
-        };
+        //semantic search button
+        const sem_search = document.createElement("button");
+        sem_search.textContent = "semantic search";
+        sem_search.className = "sem-search";
+        sem_search.marginLeft = "5px"; 
+        // youtubebar.insertBefore(sem_search, summ.nextSibling);
         
-    
-
-    if(!divElementExists){
-    const divElement = document.createElement("div");
+        const divElement = document.createElement("div");
     
     
     // Set textarea attributes
-    textareaElement.setAttribute("rows", "15");
-    textareaElement.setAttribute("cols", "50");
-    textareaElement.setAttribute("readonly", true);
+        textareaElement.setAttribute("rows", "15");
+        textareaElement.style.width = "calc(100% - 10px)";
+        
+        textareaElement.setAttribute("readonly", true);
       
     // Add textarea to the div element
-    divElement.appendChild(textareaElement);
+        divElement.appendChild(textareaElement);
     
     // Add class to the div element
     //divElement.innerHTML = 'Hello its me'; //'<textarea id="text-summary" rows="5" cols="40"></textarea>';
-    divElement.className = "div-element";
-    youtubebar.insertBefore(divElement, childd);
+        divElement.className = "div-element";
+        youtubebar.insertBefore(divElement, childd);
 
-    }
+        // Create the search bar input element
+        const searchBar = document.createElement("input");
+        searchBar.type = "text";
+        searchBar.placeholder = "Enter your search query";
+        // You can adjust the style as needed
+        searchBar.style.width = "calc(100% - 10px)";
+        // youtubebar.insertBefore(searchBar, divElement);
+        // Append the search bar to the YouTube bar
+            
+    
+}
+
     //more button
     waitForElementAndAct('tp-yt-paper-button#expand', (elm) => {
         // getTranscript(expandButton);
@@ -87,29 +117,30 @@ const newVideoLoaded =  () => {
     // Show transcript button
     waitForElementAndAct('#primary-button ytd-button-renderer yt-button-shape button', (elm) => {
     elm.click();
-    console.log('show transcript done')});
-
-
+    console.log('show transcript done')
     //return the edited transcript
-    text_f = waitForElementAndAct('#segments-container', (elm) => {
-    textt = elm.textContent 
-    textt = removenewlines(textt)
-    if (textareaElement) {
-        
-        textareaElement.textContent = textt; // Update textarea content
-    }
+    });
+    waitForElementAndAct('#segments-container', (elm) => {
+    textt = elm.textContent;
+    console.log(textt);
+    text_cleaned = removenewlines(textt);
+    console.log(text_cleaned)
+    
+    // })
 
     //close transcript
     waitForElementAndAct('[aria-label="Close transcript"]', (elm) => {
         elm.click();
-    })
+        console.log('close ' + elm);
+        
+    }); });
     
     
     
     // } 
-   });
+   }};
 
-}}; doit();
+doit();
 
 // Functions
 // Remove new lines
@@ -120,12 +151,14 @@ const removenewlines = (textt) => {
    
 // Wait for Element to load on page
 function waitForElementAndAct(selector, actionCallback) {
+    
 
     const observer = new MutationObserver((mutations) => {
         const targetElement = document.querySelector(selector);
         if (targetElement) {
             actionCallback(targetElement);
             observer.disconnect(); 
+            
         }
     });
 
@@ -135,29 +168,29 @@ function waitForElementAndAct(selector, actionCallback) {
 // Define a function to send a request to your Cloud Function
 function sendRequestToCloudFunction(text_to_cloud) {
     // Define the URL of your Cloud Function
-    const cloudFunctionUrl = 'https://us-central1-moonlit-haven-414211.cloudfunctions.net/function-smart';
-    // Send a POST request to the Cloud Function
-    fetch(cloudFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(text_to_cloud),
+    const cloudFunctionUrl = 'https://us-central1-moonlit-haven-414211.cloudfunctions.net/function-chrome-extension/generateText/';
+  
+    // Send a POST request to the Cloud Function and return the promise
+    return fetch(cloudFunctionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: text_to_cloud }),
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text(); // Return the response text
+    })
     .then(data => {
-      console.log('Response from Cloud Function:', data);
-      // Handle the response from the Cloud Function as needed
+        
+        return data; // Return the response te
     })
     .catch(error => {
-      console.error('Error:', error);
+        console.error('Error:', error);
+        throw error; // Rethrow the error to be caught by the caller
     });
-  }
-
-  // Call the function when needed (e.g., when a button is clicked)
-
-  
-
-
-
+}
 
